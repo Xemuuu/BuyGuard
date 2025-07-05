@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "D:\\BuyGuard\\backend\\BuyGuard.Api\\BuyGuard.Api\\BuyGuard.Api.csproj": {}
+    "/Users/dawid/Documents/BuyGuard/backend/BuyGuard.Api/BuyGuard.Api/BuyGuard.Api.csproj": {}
   },
   "projects": {
-    "D:\\BuyGuard\\backend\\BuyGuard.Api\\BuyGuard.Api\\BuyGuard.Api.csproj": {
+    "/Users/dawid/Documents/BuyGuard/backend/BuyGuard.Api/BuyGuard.Api/BuyGuard.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\BuyGuard\\backend\\BuyGuard.Api\\BuyGuard.Api\\BuyGuard.Api.csproj",
+        "projectUniqueName": "/Users/dawid/Documents/BuyGuard/backend/BuyGuard.Api/BuyGuard.Api/BuyGuard.Api.csproj",
         "projectName": "BuyGuard.Api",
-        "projectPath": "D:\\BuyGuard\\backend\\BuyGuard.Api\\BuyGuard.Api\\BuyGuard.Api.csproj",
-        "packagesPath": "C:\\Users\\remix\\.nuget\\packages\\",
-        "outputPath": "D:\\BuyGuard\\backend\\BuyGuard.Api\\BuyGuard.Api\\obj\\",
+        "projectPath": "/Users/dawid/Documents/BuyGuard/backend/BuyGuard.Api/BuyGuard.Api/BuyGuard.Api.csproj",
+        "packagesPath": "/Users/dawid/.nuget/packages/",
+        "outputPath": "/Users/dawid/Documents/BuyGuard/backend/BuyGuard.Api/BuyGuard.Api/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\remix\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/dawid/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -53,6 +47,22 @@
             "Accelergreat.EntityFramework.PostgreSql": {
               "target": "Package",
               "version": "[3.0.0, )"
+            },
+            "Hangfire": {
+              "target": "Package",
+              "version": "[1.8.12, )"
+            },
+            "Hangfire.AspNetCore": {
+              "target": "Package",
+              "version": "[1.8.12, )"
+            },
+            "Hangfire.Core": {
+              "target": "Package",
+              "version": "[1.8.12, )"
+            },
+            "Hangfire.PostgreSql": {
+              "target": "Package",
+              "version": "[1.20.0, )"
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
@@ -98,7 +108,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
