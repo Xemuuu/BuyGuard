@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using BuyGuard.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -25,6 +26,19 @@ builder.Services.AddHangfire(configuration => configuration
     .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddHangfireServer();
+
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:3000")
+                                 .AllowAnyHeader()
+                                 .AllowAnyMethod();
+                      });
+});
 
 var app = builder.Build();
 
