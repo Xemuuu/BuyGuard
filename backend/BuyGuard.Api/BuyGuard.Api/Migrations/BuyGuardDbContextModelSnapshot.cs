@@ -138,10 +138,9 @@ namespace BuyGuard.Api.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
+                        .HasColumnType("text");
 
-                    b.Property<decimal?>("ManagerLimitPln")
+                    b.Property<decimal?>("ManagerLimitPLN")
                         .HasColumnType("numeric");
 
                     b.Property<string>("PasswordHash")
@@ -153,6 +152,9 @@ namespace BuyGuard.Api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -173,7 +175,7 @@ namespace BuyGuard.Api.Migrations
                     b.HasOne("BuyGuard.Api.Models.User", "Author")
                         .WithMany()
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BuyGuard.Api.Models.Request", "Request")

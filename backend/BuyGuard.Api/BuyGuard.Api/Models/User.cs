@@ -6,7 +6,7 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = "employee"; // admin, manager, employee
-    public decimal? ManagerLimitPln { get; set; }
+    public decimal? ManagerLimitPLN { get; set; }
 
     // Requesty, które użytkownik utworzył
     public ICollection<Request> RequestsAuthored { get; set; } = new List<Request>();

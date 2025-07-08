@@ -2,6 +2,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using BuyGuard.Api.Data;
+using BuyGuard.Api.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,6 @@ builder.Services.AddControllers();
 // Dodaj DbContext do DI
 builder.Services.AddDbContext<BuyGuardDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -27,6 +27,18 @@ builder.Services.AddHangfire(configuration => configuration
 builder.Services.AddHangfireServer();
 
 var app = builder.Build();
+
+// Migracje i seedery w scope DbContext
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<BuyGuardDbContext>();
+
+    // Migracje bazy
+    context.Database.Migrate();
+
+    // Seedery
+    DatabaseSeeder.SeedAll(context);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
