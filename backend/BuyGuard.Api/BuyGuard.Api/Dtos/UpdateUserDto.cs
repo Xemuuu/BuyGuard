@@ -12,4 +12,8 @@ public class UpdateUserDto
 
     [Range(0, double.MaxValue, ErrorMessage = "Limit menedżera nie może być ujemny.")]
     public decimal? ManagerLimitPln { get; set; }
+
+    public string? FirstName { get; set; }
+
+    public string? LastName { get; set; }
 }

@@ -1,10 +1,16 @@
 namespace BuyGuard.Api.Dtos;
 
-using BuyGuard.Api.Models;
+public class UserDto
+{
+    public int Id { get; set; }
 
-public record class UserDto(
-    int Id,
-    string Email,
-    string Role,
-    decimal? ManagerLimitPln
-);
+    public string Email { get; set; } = string.Empty;
+
+    public string Role { get; set; } = string.Empty;
+
+    public string FirstName { get; set; } = string.Empty;
+
+    public string LastName { get; set; } = string.Empty;
+
+    public decimal? ManagerLimitPln { get; set; }
+}

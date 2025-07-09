@@ -140,7 +140,15 @@ namespace BuyGuard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("ManagerLimitPLN")
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("ManagerLimitPln")
                         .HasColumnType("numeric");
 
                     b.Property<string>("PasswordHash")

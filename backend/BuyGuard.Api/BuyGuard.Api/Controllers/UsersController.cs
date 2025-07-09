@@ -1,11 +1,17 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using BCrypt.Net;
 using BuyGuard.Api.Data;
 using BuyGuard.Api.Dtos;
 using BuyGuard.Api.Models;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
+
+[Authorize(Roles = "admin,manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -17,25 +23,93 @@ public class UsersController : ControllerBase
         _context = context;
     }
 
-    // GET: Metoda do pobierania listy wszystkich użytkowników.
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        // TODO: zwracanie listy użytkowników 
-        await Task.CompletedTask;
-        throw new NotImplementedException("Ta metoda zostanie zaimplementowana w przyszłości.");
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (currentUserRole == null)
+            return Forbid();
+
+        IQueryable<User> query;
+
+        if (currentUserRole == "admin")
+        {
+            query = _context.Users.Where(u => u.Role == "manager");
+        }
+        else if (currentUserRole == "manager")
+        {
+            query = _context.Users.Where(u => u.Role == "employee");
+        }
+        else
+        {
+            return Forbid();
+        }
+
+        var users = await query
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                Email = u.Email,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                Role = u.Role,
+                ManagerLimitPln = u.Role == "manager" ? u.ManagerLimitPln : null
+            })
+            .ToListAsync();
+
+        return Ok(users);
     }
 
-    // POST: Metoda do tworzenia nowego użytkownika.
     [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto createUserDto)
     {
-        // TODO: tworzenie nowego użytkownika
-        await Task.CompletedTask;
-        throw new NotImplementedException("Ta metoda zostanie zaimplementowana w przyszłości.");
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (currentUserRole != "admin" && currentUserRole != "manager")
+        {
+            return Forbid();
+        }
+
+        var existingUser = await _context.Users.AnyAsync(u => u.Email == createUserDto.Email);
+        if (existingUser)
+        {
+            return Conflict("Użytkownik o podanym e-mailu już istnieje.");
+        }
+
+        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(createUserDto.Password);
+
+        var newUser = new User
+        {
+            FirstName = createUserDto.FirstName,
+            LastName = createUserDto.LastName,
+            Email = createUserDto.Email,
+            PasswordHash = hashedPassword,
+            Role = currentUserRole == "admin" ? "manager" : "employee",
+            ManagerLimitPln = currentUserRole == "admin" ? createUserDto.ManagerLimitPln : null
+        };
+
+        _context.Users.Add(newUser);
+        await _context.SaveChangesAsync();
+
+        var resultDto = new UserDto
+        {
+            Id = newUser.Id,
+            Email = newUser.Email,
+            FirstName = newUser.FirstName,
+            LastName = newUser.LastName,
+            Role = newUser.Role,
+            ManagerLimitPln = newUser.ManagerLimitPln
+        };
+
+        return CreatedAtAction(nameof(GetUsers), new { id = newUser.Id }, resultDto);
     }
 
-    // PATCH: Metoda do częściowej aktualizacji istniejącego użytkownika
+
+    // PATCH: api/users/{id}
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
     {
@@ -52,8 +126,8 @@ public class UsersController : ControllerBase
         }
 
         if (updateUserDto.Password != null)
-        {     
-            // TODO: logika do hashowania hasła
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateUserDto.Password);
         }
 
         if (updateUserDto.ManagerLimitPln.HasValue)
@@ -67,14 +141,13 @@ public class UsersController : ControllerBase
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Logika na wypadek konfliktu współbieżności
             throw;
         }
 
-        return NoContent(); 
+        return NoContent();
     }
 
-    // DELETE: Metoda do usuwania użytkownika
+    // DELETE: api/users/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -87,6 +160,24 @@ public class UsersController : ControllerBase
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
 
-        return NoContent(); 
+        return NoContent();
     }
+
+    [Authorize]
+    [HttpGet("whoami")]
+    public IActionResult WhoAmI()
+    {
+        var roles = User.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToList();
+
+        return Ok(new
+        {
+            UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+            Email = User.FindFirst(ClaimTypes.Email)?.Value,
+            Roles = roles
+        });
+    }
+
 }

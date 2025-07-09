@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BuyGuard.Api.Migrations
 {
     [DbContext(typeof(BuyGuardDbContext))]
-    [Migration("20250708122625_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250709085433_SeedInitialData")]
+    partial class SeedInitialData
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -143,7 +143,15 @@ namespace BuyGuard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("ManagerLimitPLN")
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("ManagerLimitPln")
                         .HasColumnType("numeric");
 
                     b.Property<string>("PasswordHash")

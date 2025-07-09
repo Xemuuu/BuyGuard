@@ -2,7 +2,6 @@
 using System.Text;
 using BuyGuard.Api.Data;
 using BuyGuard.Api.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace BuyGuard.Api.Seed;
 
@@ -13,33 +12,39 @@ public static class UserSeeder
         if (!context.Users.Any())
         {
             var users = new List<User>
-        {
-            new User
             {
-                Email = "admin@buyguard.pl",
-                PasswordHash = HashPassword("Admin123!"),
-                Role = "admin"
-            },
-            new User
-            {
-                Email = "manager@buyguard.pl",
-                PasswordHash = HashPassword("Manager123!"),
-                Role = "manager",
-                ManagerLimitPLN = 50000
-            },
-            new User
-            {
-                Email = "user@buyguard.pl",
-                PasswordHash = HashPassword("User123!"),
-                Role = "employee"
-            }
-        };
+                new User
+                {
+                    Email = "admin@buyguard.pl",
+                    FirstName = "Admin",
+                    LastName = "Admin",
+                    PasswordHash = HashPassword("Admin123!"),
+                    Role = "admin"
+                },
+                new User
+                {
+                    Email = "manager@buyguard.pl",
+                    FirstName = "Marcin",
+                    LastName = "Marciński",
+                    PasswordHash = HashPassword("Manager123!"),
+                    Role = "manager",
+                    ManagerLimitPln = 150000
+                },
+                new User
+                {
+                    Email = "employee@buyguard.pl",
+                    FirstName = "Marek",
+                    LastName = "Markowski",
+                    PasswordHash = HashPassword("User123!"),
+                    Role = "employee"
+                },
+                
+            };
 
             context.Users.AddRange(users);
             context.SaveChanges();
         }
     }
-
 
     private static string HashPassword(string password)
     {

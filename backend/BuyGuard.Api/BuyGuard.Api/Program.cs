@@ -1,24 +1,88 @@
-using Hangfire;
-using Hangfire.PostgreSql;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Security.Claims;
+using System.Text;
 using BuyGuard.Api.Data;
 using BuyGuard.Api.Seed;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
-// Add services to the container.
+// Dodanie kontrolerów
 builder.Services.AddControllers();
 
-// Dodaj DbContext do DI
+// DbContext
 builder.Services.AddDbContext<BuyGuardDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// 🔐 JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("Jwt");
 
-// Hangfire
+var keyString = jwtSettings["Key"]
+    ?? throw new InvalidOperationException("JWT Key is missing in configuration.");
+var key = Encoding.UTF8.GetBytes(keyString);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        RoleClaimType = ClaimTypes.Role
+    };
+});
+
+builder.Services.AddAuthorization();
+
+// 🔍 Swagger z obsługą JWT
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "BuyGuard API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Wpisz token JWT w formacie: Bearer {token}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
+// ⏱ Hangfire
 builder.Services.AddHangfire(configuration => configuration
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
@@ -27,34 +91,30 @@ builder.Services.AddHangfire(configuration => configuration
 
 builder.Services.AddHangfireServer();
 
-
-// CORS
+// 🌍 CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
                           policy.WithOrigins("http://localhost:3000")
-                                 .AllowAnyHeader()
-                                 .AllowAnyMethod();
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
                       });
 });
 
+// 🏗 Budowanie aplikacji
 var app = builder.Build();
 
-// Migracje i seedery w scope DbContext
+// 🔧 Migracje i seeding
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<BuyGuardDbContext>();
-
-    // Migracje bazy
     context.Database.Migrate();
-
-    // Seedery
     DatabaseSeeder.SeedAll(context);
 }
 
-// Configure the HTTP request pipeline.
+// 🧪 Swagger tylko w dev
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -63,8 +123,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors(MyAllowSpecificOrigins);
+
 app.UseHangfireDashboard();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
