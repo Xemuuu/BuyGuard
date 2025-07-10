@@ -18,7 +18,6 @@ public class CreateUserDto
     [MinLength(8, ErrorMessage = "Hasło musi mieć co najmniej 8 znaków.")]
     public string Password { get; set; } = string.Empty;
 
-    // Ten parametr tylko dla admina, więc bez Required — sprawdzisz to w kontrolerze
     [Range(0, double.MaxValue, ErrorMessage = "Limit menedżera nie może być ujemny.")]
     public decimal? ManagerLimitPln { get; set; }
 }
