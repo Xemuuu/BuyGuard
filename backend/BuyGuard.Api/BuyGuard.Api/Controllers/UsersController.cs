@@ -1,3 +1,4 @@
+using AutoMapper;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -17,10 +18,12 @@ using Microsoft.EntityFrameworkCore;
 public class UsersController : ControllerBase
 {
     private readonly BuyGuardDbContext _context;
+    private readonly IMapper _mapper;
 
-    public UsersController(BuyGuardDbContext context)
+    public UsersController(BuyGuardDbContext context, IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
     [HttpGet]
@@ -50,18 +53,10 @@ public class UsersController : ControllerBase
             .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                FirstName = u.FirstName,
-                LastName = u.LastName,
-                Role = u.Role,
-                ManagerLimitPln = u.Role == "manager" ? u.ManagerLimitPln : null
-            })
             .ToListAsync();
 
-        return Ok(users);
+        var userDtos = _mapper.Map<IEnumerable<UserDto>>(users);
+        return Ok(userDtos);
     }
 
     [HttpPost]
@@ -95,15 +90,7 @@ public class UsersController : ControllerBase
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        var resultDto = new UserDto
-        {
-            Id = newUser.Id,
-            Email = newUser.Email,
-            FirstName = newUser.FirstName,
-            LastName = newUser.LastName,
-            Role = newUser.Role,
-            ManagerLimitPln = newUser.ManagerLimitPln
-        };
+        var resultDto = _mapper.Map<UserDto>(newUser);
 
         return CreatedAtAction(nameof(GetUsers), new { id = newUser.Id }, resultDto);
     }
@@ -113,11 +100,55 @@ public class UsersController : ControllerBase
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
     {
+        // 1. Pobierz użytkownika, którego chcemy edytować (cel)
         var user = await _context.Users.FindAsync(id);
-
         if (user == null)
         {
             return NotFound("Nie znaleziono użytkownika o podanym ID.");
+        }
+
+        // 2. Pobierz dane zalogowanego użytkownika (aktor)
+        var actorRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        var actorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(actorRole) || !int.TryParse(actorIdStr, out var actorId))
+        {
+            return Unauthorized();
+        }
+
+        if (actorId == id)
+        {
+            return BadRequest("Nie można edytować własnego konta za pomocą tego endpointu.");
+        }
+
+        switch (actorRole)
+        {
+            case "admin":
+                if (user.Role != "manager")
+                {
+                    return Forbid("Administratorzy mogą edytować tylko konta menedżerów.");
+                }
+                break; 
+
+            case "manager":
+                if (user.Role != "employee")
+                {
+                    return Forbid("Menedżerowie mogą edytować tylko konta pracowników.");
+                }
+                break; 
+            
+            default:
+                return Forbid();
+        }
+
+        if (!string.IsNullOrEmpty(updateUserDto.FirstName))
+        {
+            user.FirstName = updateUserDto.FirstName;
+        }
+
+        if (!string.IsNullOrEmpty(updateUserDto.LastName))
+        {
+            user.LastName = updateUserDto.LastName;
         }
 
         if (updateUserDto.Email != null)
@@ -130,7 +161,7 @@ public class UsersController : ControllerBase
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateUserDto.Password);
         }
 
-        if (updateUserDto.ManagerLimitPln.HasValue)
+        if (actorRole == "admin" && updateUserDto.ManagerLimitPln.HasValue)
         {
             user.ManagerLimitPln = updateUserDto.ManagerLimitPln;
         }
@@ -144,17 +175,53 @@ public class UsersController : ControllerBase
             throw;
         }
 
-        return NoContent();
+        var updatedUserDto = _mapper.Map<UserDto>(user);
+        return Ok(updatedUserDto);
     }
 
     // DELETE: api/users/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
+        // 1. Pobierz użytkownika, którego chcemy usunąć (cel)
         var user = await _context.Users.FindAsync(id);
         if (user == null)
         {
             return NotFound("Nie znaleziono użytkownika o podanym ID.");
+        }
+
+        // 2. Pobierz dane zalogowanego użytkownika (aktor)
+        var actorRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        var actorIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(actorRole) || !int.TryParse(actorIdStr, out var actorId))
+        {
+            return Unauthorized();
+        }
+
+        if (actorId == id)
+        {
+            return BadRequest("Nie można usunąć własnego konta.");
+        }
+
+        switch (actorRole)
+        {
+            case "admin":
+                if (user.Role != "manager")
+                {
+                    return Forbid("Administratorzy mogą usuwać tylko konta menedżerów.");
+                }
+                break;
+
+            case "manager":
+                if (user.Role != "employee")
+                {
+                    return Forbid("Menedżerowie mogą usuwać tylko konta pracowników.");
+                }
+                break;
+            
+            default:
+                return Forbid();
         }
 
         _context.Users.Remove(user);
