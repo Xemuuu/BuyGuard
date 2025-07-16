@@ -256,7 +256,7 @@ public class RequestsController : ControllerBase
         bool isAdmin = currentUserRole == "admin";
 
         if (!isAdmin && !(currentUserRole == "manager" && isAssignedManager))
-            return Forbid("Brak uprawnień do zmiany statusu.");
+            return Forbid("Brak uprawnienia do zmiany statusu.");
 
         // Zmiana statusu
         if (!Enum.TryParse<RequestStatus>(dto.NewStatus, true, out var newStatus))
