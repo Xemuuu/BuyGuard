@@ -50,37 +50,16 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// 🔍 Swagger z obsługą JWT
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "BuyGuard API", Version = "v1" });
+builder.Services.AddSwaggerGen();
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Wpisz token JWT w formacie: Bearer {token}"
-    });
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(Program));
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            new string[] {}
-        }
-    });
-});
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(Program));
+
 
 // ⏱ Hangfire
 builder.Services.AddHangfire(configuration => configuration
