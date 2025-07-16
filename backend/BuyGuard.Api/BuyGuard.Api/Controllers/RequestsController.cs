@@ -237,5 +237,38 @@ public class RequestsController : ControllerBase
         return Ok(pagedRequests);
     }
 
+    // PATCH: api/requests/{id}/status
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateRequestStatus(int id, [FromBody] UpdateStatusDto dto)
+    {
+        var request = await _context.Requests.FindAsync(id);
+        if (request == null)
+            return NotFound("Nie znaleziono zgłoszenia.");
+
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (currentUserId == null || currentUserRole == null)
+            return Unauthorized();
+
+        // Sprawdzenie uprawnień
+        bool isAssignedManager = request.ManagerId.ToString() == currentUserId;
+        bool isAdmin = currentUserRole == "admin";
+
+        if (!isAdmin && !(currentUserRole == "manager" && isAssignedManager))
+            return Forbid("Brak uprawnień do zmiany statusu.");
+
+        // Zmiana statusu
+        if (!Enum.TryParse<RequestStatus>(dto.NewStatus, true, out var newStatus))
+            return BadRequest("Nieprawidłowy status.");
+
+        request.Status = newStatus;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return Ok("Status został zmieniony.");
+    }
 
 }
+
+
