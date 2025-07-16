@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BuyGuard.Api.Migrations
 {
     [DbContext(typeof(BuyGuardDbContext))]
-    [Migration("20250709085433_SeedInitialData")]
-    partial class SeedInitialData
+    [Migration("20250716122306_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -121,6 +121,9 @@ namespace BuyGuard.Api.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Url")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

@@ -19,7 +19,7 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<BuyGuardDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔐 JWT Authentication
+//  JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 
 var keyString = jwtSettings["Key"]
@@ -52,7 +52,40 @@ builder.Services.AddAuthorization();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "BuyGuard API", Version = "v1" });
+
+    // Definicja schematu autoryzacji Bearer (JWT)
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = @"JWT Authorization header using the Bearer scheme. 
+                        Wpisz 'Bearer' + spacja + token w polu poniżej.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    // Wymagaj tokenu globalnie dla wszystkich endpointów (lub możesz to ograniczyć)
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "Bearer",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+});
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
@@ -61,7 +94,7 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddAutoMapper(typeof(Program));
 
 
-// ⏱ Hangfire
+//  Hangfire
 builder.Services.AddHangfire(configuration => configuration
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
@@ -70,7 +103,7 @@ builder.Services.AddHangfire(configuration => configuration
 
 builder.Services.AddHangfireServer();
 
-// 🌍 CORS
+//  CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
@@ -82,10 +115,10 @@ builder.Services.AddCors(options =>
                       });
 });
 
-// 🏗 Budowanie aplikacji
+//  Budowanie aplikacji
 var app = builder.Build();
 
-// 🔧 Migracje i seeding
+//  Migracje i seeding
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<BuyGuardDbContext>();
@@ -93,7 +126,7 @@ using (var scope = app.Services.CreateScope())
     DatabaseSeeder.SeedAll(context);
 }
 
-// 🧪 Swagger tylko w dev
+//  Swagger tylko w dev
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

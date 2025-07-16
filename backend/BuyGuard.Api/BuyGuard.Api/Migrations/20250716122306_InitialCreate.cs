@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BuyGuard.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class SeedInitialData : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -39,6 +39,7 @@ namespace BuyGuard.Api.Migrations
                     AuthorId = table.Column<int>(type: "integer", nullable: false),
                     ManagerId = table.Column<int>(type: "integer", nullable: true),
                     Title = table.Column<string>(type: "text", nullable: false),
+                    Url = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: false),
                     AmountPln = table.Column<decimal>(type: "numeric", nullable: false),
                     Reason = table.Column<string>(type: "text", nullable: false),
