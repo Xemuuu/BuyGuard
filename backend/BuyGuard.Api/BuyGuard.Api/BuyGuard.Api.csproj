@@ -27,4 +27,6 @@
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.0" />
   </ItemGroup>
 
+  <ProjectExtensions><VisualStudio><UserProperties appsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
+
 </Project>
