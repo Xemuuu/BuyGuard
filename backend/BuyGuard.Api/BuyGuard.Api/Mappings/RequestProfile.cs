@@ -8,5 +8,6 @@ public class RequestProfile : Profile
     public RequestProfile()
     {
         CreateMap<Request, RequestDto>();
+        CreateMap<UpdateRequestDto, Request>();
     }
 }

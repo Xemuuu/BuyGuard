@@ -1,14 +1,27 @@
 'use client';
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
 export default function Home() {
+
+  const router = useRouter();
+
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    router.push("/dashboard");
+  }
+  }, []);
 
   const validate = () => {
     const newErrors: typeof errors = {};
@@ -22,11 +35,25 @@ export default function Home() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validate()) {
-      console.log("Logged in", { email, password });
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validate()) return;
+
+  const res = await fetch("http://localhost:5252/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    headers: { "Content-Type": "application/json" },
+  });
+
+    const data = await res.json();
+
+    if (res.ok && data.token) {
+    localStorage.setItem("token", data.token);
+    router.push("/dashboard");
+    } else {
+    setErrors({ ...errors, password: "Invalid credentials" });
+  }
+
   };
 
   return (
@@ -51,7 +78,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Password field */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
