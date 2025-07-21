@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -6,6 +7,8 @@ using System.Text;
 using BuyGuard.Api.Data;
 using BuyGuard.Api.Models;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 
 [ApiController]
@@ -30,7 +33,42 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid credentials.");
 
         var token = GenerateJwtToken(user);
-        return Ok(new { token });
+        var refreshToken = GenerateRefreshToken();
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+        _context.SaveChanges();
+        return Ok(new { token, refreshToken });
+    }
+
+    [HttpPost("refresh")]
+    public IActionResult Refresh([FromBody] RefreshRequest request)
+    {
+        var user = _context.Users.FirstOrDefault(u => u.RefreshToken == request.RefreshToken && u.RefreshTokenExpiry > DateTime.UtcNow);
+        if (user == null)
+            return Unauthorized("Invalid refresh token.");
+        var token = GenerateJwtToken(user);
+        var newRefreshToken = GenerateRefreshToken();
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+        _context.SaveChanges();
+        return Ok(new { token, refreshToken = newRefreshToken });
+    }
+
+    [Authorize]
+    [HttpGet("whoami")]
+    public IActionResult WhoAmI()
+    {
+        var roles = User.Claims
+            .Where(c => c.Type == ClaimTypes.Role)
+            .Select(c => c.Value)
+            .ToList();
+
+        return Ok(new
+        {
+            UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+            Email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
+            Roles = roles
+        });
     }
 
     private string GenerateJwtToken(User user)
@@ -71,6 +109,16 @@ public class AuthController : ControllerBase
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    private string GenerateRefreshToken()
+    {
+        var randomNumber = new byte[32];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+    }
+
 
     private bool VerifyPassword(string password, string storedHash)
     {
@@ -84,4 +132,9 @@ public class LoginRequest
 {
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+}
+
+public class RefreshRequest
+{
+    public string RefreshToken { get; set; } = string.Empty;
 }

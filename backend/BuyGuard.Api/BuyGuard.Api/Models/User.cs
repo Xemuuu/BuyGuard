@@ -9,6 +9,8 @@ public class User
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public decimal? ManagerLimitPln { get; set; }
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiry { get; set; }
 
     // Requesty, które użytkownik utworzył
     public ICollection<Request> RequestsAuthored { get; set; } = new List<Request>();

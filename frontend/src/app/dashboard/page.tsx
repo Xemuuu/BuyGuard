@@ -19,7 +19,7 @@ export default function Dashboard() {
 
     const fetchData = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/protected', {
+        const res = await fetch('http://localhost:5252/api/auth/whoami', {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -30,9 +30,11 @@ export default function Dashboard() {
         const json = await res.json();
         setData(json);
       } catch (err) {
-        console.error(err);
-        setError('Unauthorized');
-        router.push('/');
+          console.error(err);
+          setError('Unauthorized');
+          localStorage.removeItem('token'); // Usuwa token przy 401
+          router.push('/');
+      
       } finally {
         setLoading(false);
       }
