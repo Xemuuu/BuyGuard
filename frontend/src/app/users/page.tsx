@@ -33,10 +33,11 @@ import { Pencil, Trash2 } from "lucide-react"
 
 interface User {
   id: string
-  firstname: string
-  lastname: string
+  firstName: string
+  lastName: string
   email: string
-  manager_limit_pln?: number
+  role: string
+  managerLimitPln?: number
 }
 
 export default function UsersPage() {
@@ -81,14 +82,15 @@ export default function UsersPage() {
     e.preventDefault()
 
     const payload: any = {
-      firstname: newUser.firstname,
-      lastname: newUser.lastname,
+      firstName: newUser.firstname,
+      lastName: newUser.lastname,
       email: newUser.email,
-      password: newUser.password
+      password: newUser.password,
+      role: role === "admin" ? "manager" : "user"
     }
 
     if (role === "admin") {
-      payload.manager_limit_pln = Number(newUser.manager_limit_pln)
+      payload.managerLimitPln = Number(newUser.manager_limit_pln)
     }
 
     const method = editUser ? "PATCH" : "POST"
@@ -118,24 +120,27 @@ export default function UsersPage() {
   useEffect(() => {
     if (editUser) {
       setNewUser({
-        firstname: editUser.firstname,
-        lastname: editUser.lastname,
+        firstname: editUser.firstName,
+        lastname: editUser.lastName,
         email: editUser.email,
         password: "",
-        manager_limit_pln: editUser.manager_limit_pln?.toString() ?? ""
+        manager_limit_pln: editUser.managerLimitPln?.toString() ?? ""
       })
     }
   }, [editUser])
 
   async function fetchRole() {
-    const me = await fetchWithAuth("/api/users/me")
-    setRole(me.role)
+    const me = await fetchWithAuth("/api/users/whoami")
+    console.log("Rola: ", me.roles?.[0]) // debug
+    setRole(me.roles?.[0] ?? "user")
   }
 
   async function fetchUsers() {
     const res = await fetchWithAuth(`/api/users?page=${page}&limit=10`)
-    setUsers(res.users)
-    setTotalPages(res.totalPages || 1)
+    console.log("Dane z backendu", res) // debug
+
+    setUsers(res ?? [])
+    setTotalPages(1)
   }
 
   return (
@@ -145,8 +150,18 @@ export default function UsersPage() {
 
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
-              Dodaj użytkownika
+            <Button className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+                onClick={() => {
+                setEditUser(null);
+                setNewUser({
+                  firstname: "",
+                  lastname: "",
+                  email: "",
+                  password: "",
+                  manager_limit_pln: ""
+                });
+              }}>
+              {role === "admin" ? "Dodaj menedżera" : "Dodaj pracownika"}
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-zinc-900 border border-zinc-700 text-white">
@@ -190,6 +205,7 @@ export default function UsersPage() {
                 <TableHead className="text-white">Imię</TableHead>
                 <TableHead className="text-white">Nazwisko</TableHead>
                 <TableHead className="text-white">Email</TableHead>
+                <TableHead className="text-white">Rola</TableHead>
                 {role === "admin" && <TableHead className="text-white">Limit</TableHead>}
                 <TableHead className="text-white">Akcje</TableHead>
               </TableRow>
@@ -197,21 +213,20 @@ export default function UsersPage() {
             <TableBody>
               {users.map(user => (
                 <TableRow key={user.id}>
-                  <TableCell className="text-zinc-300">{user.firstname}</TableCell>
-                  <TableCell className="text-zinc-300">{user.lastname}</TableCell>
+                  <TableCell className="text-zinc-300">{user.firstName}</TableCell>
+                  <TableCell className="text-zinc-300">{user.lastName}</TableCell>
                   <TableCell className="text-zinc-300">{user.email}</TableCell>
+                  <TableCell className="text-zinc-300">{user.role}</TableCell>
                   {role === "admin" && (
-                    <TableCell className="text-zinc-300">{user.manager_limit_pln ?? "-"}</TableCell>
+                    <TableCell className="text-zinc-300">{user.managerLimitPln ?? "-"}</TableCell>
                   )}
                   <TableCell className="flex gap-2">
-                    <Button size="icon" variant="outline" onClick={() => openEdit(user)}>
+                    <Button size="icon" className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition" onClick={() => openEdit(user)}>
                       <Pencil size={16} />
                     </Button>
-                    <AlertDialogTrigger asChild>
-                      <Button size="icon" variant="destructive" onClick={() => setDeleteUserId(user.id)}>
+                      <Button size="icon" className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition" onClick={() => setDeleteUserId(user.id)}>
                         <Trash2 size={16} />
                       </Button>
-                    </AlertDialogTrigger>
                   </TableCell>
                 </TableRow>
               ))}
@@ -224,7 +239,7 @@ export default function UsersPage() {
             variant="outline"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="text-white border-zinc-600"
+            className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
           >
             Poprzednia
           </Button>
@@ -233,7 +248,7 @@ export default function UsersPage() {
             variant="outline"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="text-white border-zinc-600"
+            className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
           >
             Następna
           </Button>
@@ -241,14 +256,15 @@ export default function UsersPage() {
       </div>
 
       <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
-        <AlertDialogContent className="bg-zinc-900 border border-zinc-700 text-white">
+        <AlertDialogContent className="bg-zinc-600 text-white px-4 py-2 rounded-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Czy na pewno chcesz usunąć tego użytkownika?</AlertDialogTitle>
           </AlertDialogHeader>
           <AlertDialogFooter className="pt-4">
-            <Button variant="outline" onClick={() => setDeleteUserId(null)}>Anuluj</Button>
+            <Button variant="outline" className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition" onClick={() => setDeleteUserId(null)}>Anuluj</Button>
             <Button
-              variant="destructive"
+            variant="outline"
+            className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
               onClick={async () => {
                 try {
                   await fetchWithAuth(`/api/users/${deleteUserId}`, { method: "DELETE" })
@@ -264,6 +280,8 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
     </main>
+    
   )
 }

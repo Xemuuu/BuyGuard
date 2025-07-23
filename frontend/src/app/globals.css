@@ -124,3 +124,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+label {
+  margin-bottom: 7px;
+  display: block;
+}
