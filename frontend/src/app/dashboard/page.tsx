@@ -263,7 +263,7 @@ export default function Dashboard() {
               <h2 className="text-xl font-semibold mb-4 text-center">Your requests</h2>
               <div className="flex justify-end mb-3">
                 <button
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
+                  className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
                   onClick={() => setShowNewRequest(true)}
                 >
                   New request
@@ -289,7 +289,34 @@ export default function Dashboard() {
                           <td className="px-4 py-2">{req.id}</td>
                           <td className="px-4 py-2">{req.title}</td>
                           <td className="px-4 py-2">{req.amountPln}</td>
-                          <td className="px-4 py-2">{req.status}</td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={req.status}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value;
+                                try {
+                                  const token = localStorage.getItem("token");
+                                  const res = await fetch(`http://localhost:5252/api/requests/${req.id}/status`, {
+                                    method: "PATCH",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                    body: JSON.stringify({ newStatus }),
+                                  });
+                                  if (!res.ok) throw new Error("Błąd zmiany statusu");
+                                  await fetchRequests();
+                                  } catch (err) {
+                                    console.error("Błąd aktualizacji statusu:", err);
+                                  }
+                                }}
+                                className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+                              >
+                                <option value="Czeka">PENDING</option>
+                                <option value="Zaakceptowane">ACCEPTED</option>
+                                <option value="Odrzucone">REJECTED</option>
+                                <option value="Zakupione">PURCHASED</option>
+                              </select></td>
                           <td className="px-4 py-2">{new Date(req.createdAt).toLocaleString()}</td>
                           <td className="px-4 py-2">{req.reason || req.Reason || '-'}</td>
                         </tr>
