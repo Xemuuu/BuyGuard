@@ -7,6 +7,9 @@ using BuyGuard.Api.Dtos;
 using BuyGuard.Api.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using System.Text;
+using System.Text.Json;
+
 
 [ApiController]
 [Route("api/[controller]")]
@@ -267,6 +270,47 @@ public class RequestsController : ControllerBase
 
         await _context.SaveChangesAsync();
         return Ok("Status został zmieniony.");
+    }
+
+    // GET: api/requests/export
+    // Export plików CSV
+    [HttpGet("export")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> ExportReport([FromQuery] int? month, [FromQuery] int? year, [FromQuery] string format = "csv")
+    {
+        var query = _context.Requests
+            .Include(r => r.Author)
+            .AsQueryable();
+
+        if (month.HasValue && year.HasValue)
+        {
+            query = query.Where(r => r.CreatedAt.Month == month && r.CreatedAt.Year == year);
+        }
+
+        var data = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
+
+        if (format.ToLower() == "csv")
+        {
+            var csvBuilder = new StringBuilder();
+            csvBuilder.AppendLine("Id,Tytuł,Status,Data utworzenia,Kwota,Autor");
+
+            foreach (var r in data)
+            {
+                csvBuilder.AppendLine($"{r.Id},\"{r.Title}\",{r.Status},{r.CreatedAt:yyyy-MM-dd},{r.AmountPln},\"{r.Author.FirstName} {r.Author.LastName}\"");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(csvBuilder.ToString());
+            return File(bytes, "text/csv", "raport_zgloszen.csv");
+        }
+        else if (format.ToLower() == "pdf")
+        {
+            // Możesz tu dodać generowanie PDF
+            return StatusCode(501, "Eksport do PDF nie został jeszcze zaimplementowany.");
+        }
+        else
+        {
+            return BadRequest("Nieobsługiwany format eksportu. Użyj 'csv' lub 'pdf'.");
+        }
     }
 
 }
