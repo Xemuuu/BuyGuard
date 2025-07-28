@@ -11,6 +11,7 @@ namespace BuyGuard.Api.Data
         public DbSet<Request> Requests { get; set; }
         public DbSet<Attachment> Attachments { get; set; }
         public DbSet<Note> Notes { get; set; }
+        public DbSet<Order> Orders { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

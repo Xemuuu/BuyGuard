@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { fetchWithAuth } from "@/lib/utils"
 
+import { useRouter } from "next/navigation"
+
 import {
   Table,
   TableBody,
@@ -78,9 +80,11 @@ export default function UsersPage() {
     })
   }
 
+  const router = useRouter();
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
+    
     const payload: any = {
       firstName: newUser.firstname,
       lastName: newUser.lastname,
@@ -145,9 +149,18 @@ export default function UsersPage() {
 
   return (
     <main className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center px-4 py-6">
+      <button
+            onClick={() => {
+              localStorage.removeItem('token');
+              router.push('/');
+            }}
+            className="bg-zinc-600 absolute top-4 right-10 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+          >
+            Log out
+          </button>
       <div className="bg-zinc-800 p-4 rounded-lg shadow-md w-full max-w-3xl space-y-4">
         <h1 className="text-2xl font-bold text-white text-center">Lista użytkowników</h1>
-
+        
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
             <Button className="bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"

@@ -45,16 +45,37 @@ export default function Home() {
     headers: { "Content-Type": "application/json" },
   });
 
-    const data = await res.json();
+  const data = await res.json();
 
-    if (res.ok && data.token) {
+  if (res.ok && data.token) {
     localStorage.setItem("token", data.token);
-    router.push("/dashboard");
-    } else {
+
+    try {
+      const whoamiRes = await fetch("http://localhost:5252/api/auth/whoami", {
+        headers: {
+          Authorization: `Bearer ${data.token}`,
+        },
+      });
+
+      if (!whoamiRes.ok) throw new Error("Failed to fetch user info");
+
+      const userInfo = await whoamiRes.json();
+      const roles = userInfo?.Roles || userInfo?.roles || [];
+
+      if (roles.includes("admin")) {
+        router.push("/users");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      console.error("Error fetching user info:", err);
+      router.push("/dashboard"); 
+    }
+  } else {
     setErrors({ ...errors, password: "Invalid credentials" });
   }
+};
 
-  };
 
   return (
     <main className="min-h-screen bg-zinc-900 flex flex-col">
