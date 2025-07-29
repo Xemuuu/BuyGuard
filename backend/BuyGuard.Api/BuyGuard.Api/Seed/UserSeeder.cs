@@ -9,8 +9,11 @@ public static class UserSeeder
 {
     public static void Seed(BuyGuardDbContext context)
     {
+        Console.WriteLine("UserSeeder.Seed called");
+        
         if (!context.Users.Any())
         {
+            Console.WriteLine("No users found, creating new users");
             var users = new List<User>
             {
                 new User
@@ -36,14 +39,50 @@ public static class UserSeeder
                     FirstName = "Marek",
                     LastName = "Markowski",
                     PasswordHash = HashPassword("User123!"),
-                    Role = "employee"
+                    Role = "employee",
+                    ManagerId = 2 // Przypisz do managera (ID = 2)
                 },
                 
             };
 
             context.Users.AddRange(users);
             context.SaveChanges();
+            Console.WriteLine("New users created");
         }
+        else
+        {
+            Console.WriteLine("Users exist, updating existing users");
+            // Aktualizuj istniejących użytkowników
+            UpdateExistingUsers(context);
+        }
+    }
+
+    private static void UpdateExistingUsers(BuyGuardDbContext context)
+    {
+        Console.WriteLine("UpdateExistingUsers called");
+        
+        // Znajdź managera
+        var manager = context.Users.FirstOrDefault(u => u.Role == "manager");
+        if (manager == null)
+        {
+            Console.WriteLine("No manager found in database");
+            return;
+        }
+        
+        Console.WriteLine($"Found manager: {manager.FirstName} {manager.LastName} (ID: {manager.Id})");
+
+        // Aktualizuj pracowników żeby mieli przypisanego managera
+        var employees = context.Users.Where(u => u.Role == "employee" && u.ManagerId == null).ToList();
+        Console.WriteLine($"Found {employees.Count} employees without manager");
+        
+        foreach (var employee in employees)
+        {
+            employee.ManagerId = manager.Id;
+            Console.WriteLine($"Updated employee {employee.Email} with manager {manager.Email}");
+        }
+
+        context.SaveChanges();
+        Console.WriteLine("UpdateExistingUsers completed");
     }
 
     private static string HashPassword(string password)

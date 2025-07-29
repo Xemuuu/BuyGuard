@@ -90,7 +90,7 @@ public class RequestsController : ControllerBase
 
         if (currentUserRole != "admin" && currentUserRole != "manager")
         {
-            if (request.AuthorId.ToString() == currentUserId && request.Status == RequestStatus.Czeka)
+            if (request.AuthorId.ToString() == currentUserId && request.Status == RequestStatus.PENDING)
             {
                 // Autor może edytować tylko niektóre pola, gdy status to "Czeka"
                 request.Title = updateRequestDto.Title;
@@ -172,7 +172,7 @@ public class RequestsController : ControllerBase
             Description = dto.Description,
             AmountPln = dto.AmountPln,
             Reason = dto.Reason,
-            Status = RequestStatus.Czeka,
+            Status = RequestStatus.PENDING,
             AuthorId = authorId,
             ManagerId = manager.Id,
             CreatedAt = DateTime.UtcNow,
@@ -204,6 +204,8 @@ public class RequestsController : ControllerBase
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var currentUserRole = User.FindFirst(ClaimTypes.Role)!.Value;
 
+        Console.WriteLine($"GetRequests - User ID: {currentUserId}, Role: {currentUserRole}");
+
         var query = _context.Requests
             .Include(r => r.Author)
             .AsQueryable();
@@ -212,12 +214,24 @@ public class RequestsController : ControllerBase
         if (currentUserRole == "employee")
         {
             query = query.Where(r => r.AuthorId == currentUserId);
+            Console.WriteLine($"Employee filter - AuthorId = {currentUserId}");
         }
         else if (currentUserRole == "manager")
         {
-            query = query.Where(r => r.ManagerId == currentUserId);
+            query = query.Where(r => r.ManagerId == currentUserId && !r.IsSubmitted);
+            Console.WriteLine($"Manager filter - ManagerId = {currentUserId}, IsSubmitted = false");
         }
         // admin widzi wszystko – brak filtru
+
+        // Sprawdź ile requestów ma manager
+        var allManagerRequests = await _context.Requests
+            .Where(r => r.ManagerId == currentUserId)
+            .ToListAsync();
+        Console.WriteLine($"All requests for manager {currentUserId}: {allManagerRequests.Count}");
+        foreach (var req in allManagerRequests)
+        {
+            Console.WriteLine($"Request {req.Id}: ManagerId={req.ManagerId}, IsSubmitted={req.IsSubmitted}, Status={req.Status}");
+        }
 
         // Paginacja
         var skip = (pageNumber - 1) * pageSize;
@@ -233,9 +247,12 @@ public class RequestsController : ControllerBase
                 AmountPln = r.AmountPln,
                 CreatedAt = r.CreatedAt,
                 AuthorFirstName = r.Author.FirstName,
-                AuthorLastName = r.Author.LastName
+                AuthorLastName = r.Author.LastName,
+                Reason = r.Reason // Dodaję Reason do DTO
             })
             .ToListAsync();
+
+        Console.WriteLine($"Returning {pagedRequests.Count} requests for {currentUserRole}");
 
         return Ok(pagedRequests);
     }
@@ -264,12 +281,121 @@ public class RequestsController : ControllerBase
         // Zmiana statusu
         if (!Enum.TryParse<RequestStatus>(dto.NewStatus, true, out var newStatus))
             return BadRequest("Nieprawidłowy status.");
-
         request.Status = newStatus;
         request.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        return Ok("Status został zmieniony.");
+        
+        // Wczytaj zaktualizowany request z relacjami
+        var updatedRequest = await _context.Requests
+            .Include(r => r.Author)
+            .Include(r => r.Manager)
+            .Include(r => r.Attachments)
+            .Include(r => r.Notes)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (updatedRequest == null)
+            return StatusCode(500, "Wystąpił błąd przy aktualizacji statusu.");
+
+        var result = _mapper.Map<RequestDto>(updatedRequest);
+        return Ok(result);
+    }
+
+    // PATCH: api/requests/{id}/edit
+    [HttpPatch("{id}/edit")]
+    public async Task<IActionResult> EditRequest(int id, [FromBody] EditRequestDto editRequestDto)
+    {
+        var request = await _context.Requests.FindAsync(id);
+        if (request == null)
+            return NotFound("Nie znaleziono zgłoszenia.");
+
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (currentUserId == null || currentUserRole == null)
+            return Unauthorized();
+
+        Console.WriteLine($"EditRequest - Request ID: {id}, User ID: {currentUserId}, Role: {currentUserRole}");
+        Console.WriteLine($"Current request - ManagerId: {request.ManagerId}, Amount: {request.AmountPln}, Status: {request.Status}");
+
+        // Sprawdzenie uprawnień - tylko autor może edytować swoje zgłoszenie
+        if (request.AuthorId.ToString() != currentUserId)
+            return Forbid("Możesz edytować tylko swoje zgłoszenia.");
+
+        // Sprawdzenie statusu - tylko PENDING można edytować
+        if (request.Status != RequestStatus.PENDING)
+            return BadRequest("Można edytować tylko zgłoszenia ze statusem PENDING.");
+
+        // Aktualizuj pola tylko jeśli zostały podane i nie są puste
+        if (!string.IsNullOrWhiteSpace(editRequestDto.Title))
+            request.Title = editRequestDto.Title;
+        
+        if (!string.IsNullOrWhiteSpace(editRequestDto.Description))
+            request.Description = editRequestDto.Description;
+        
+        if (editRequestDto.AmountPln.HasValue && editRequestDto.AmountPln.Value > 0)
+        {
+            var oldAmount = request.AmountPln;
+            request.AmountPln = editRequestDto.AmountPln.Value;
+            
+            // Jeśli kwota się zmieniła, sprawdź czy manager nadal pasuje
+            if (oldAmount != request.AmountPln)
+            {
+                var currentManager = await _context.Users.FindAsync(request.ManagerId);
+                if (currentManager == null || currentManager.Role != "manager" || 
+                    (currentManager.ManagerLimitPln.HasValue && currentManager.ManagerLimitPln.Value < request.AmountPln))
+                {
+                    // Znajdź nowego menedżera z odpowiednim limitem
+                    var newManager = await _context.Users
+                        .Where(u => u.Role == "manager" && u.ManagerLimitPln >= request.AmountPln)
+                        .OrderBy(u => u.ManagerLimitPln)
+                        .FirstOrDefaultAsync();
+
+                    // Jeśli brak menedżera – przypisz administratora
+                    if (newManager == null)
+                    {
+                        newManager = await _context.Users
+                            .Where(u => u.Role == "admin")
+                            .FirstOrDefaultAsync();
+                    }
+
+                    if (newManager != null)
+                    {
+                        Console.WriteLine($"Changing manager from {request.ManagerId} to {newManager.Id} for request {id}");
+                        request.ManagerId = newManager.Id;
+                    }
+                }
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(editRequestDto.Reason))
+            request.Reason = editRequestDto.Reason;
+
+        if (!string.IsNullOrWhiteSpace(editRequestDto.Url))
+            request.Url = editRequestDto.Url;
+
+        request.UpdatedAt = DateTime.UtcNow;
+        
+        // Po edycji request powinien być ponownie widoczny dla managera
+        request.IsSubmitted = false;
+
+        await _context.SaveChangesAsync();
+
+        Console.WriteLine($"Request {id} updated - Final ManagerId: {request.ManagerId}, Amount: {request.AmountPln}");
+
+        // Wczytaj zaktualizowany request z relacjami
+        var updatedRequest = await _context.Requests
+            .Include(r => r.Author)
+            .Include(r => r.Manager)
+            .Include(r => r.Attachments)
+            .Include(r => r.Notes)
+            .FirstOrDefaultAsync(r => r.Id == id);
+
+        if (updatedRequest == null)
+            return StatusCode(500, "Wystąpił błąd przy aktualizacji zgłoszenia.");
+
+        var result = _mapper.Map<RequestDto>(updatedRequest);
+        return Ok(result);
     }
 
     // GET: api/requests/export
@@ -311,6 +437,58 @@ public class RequestsController : ControllerBase
         {
             return BadRequest("Nieobsługiwany format eksportu. Użyj 'csv' lub 'pdf'.");
         }
+    }
+
+    // POST: api/requests/{id}/notify
+    [HttpPost("{id}/notify")]
+    public async Task<IActionResult> NotifyEmployee(int id)
+    {
+        var request = await _context.Requests
+            .Include(r => r.Author)
+            .Include(r => r.Manager)
+            .FirstOrDefaultAsync(r => r.Id == id);
+            
+        if (request == null)
+            return NotFound("Nie znaleziono zgłoszenia.");
+
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (currentUserId == null || currentUserRole == null)
+            return Unauthorized();
+
+        // Sprawdzenie uprawnień - tylko manager i admin mogą wysyłać powiadomienia
+        bool isAssignedManager = request.ManagerId.ToString() == currentUserId;
+        bool isAdmin = currentUserRole == "admin";
+
+        if (!isAdmin && !(currentUserRole == "manager" && isAssignedManager))
+            return Forbid("Brak uprawnienia do wysyłania powiadomień.");
+
+        // Pobierz dane wysyłającego
+        var sender = await _context.Users.FindAsync(int.Parse(currentUserId));
+        if (sender == null)
+            return NotFound("Nie znaleziono użytkownika wysyłającego.");
+
+        // Utwórz powiadomienie dla pracownika
+        var notification = new Notification
+        {
+            RecipientId = request.AuthorId,
+            RequestId = request.Id,
+            SenderId = sender.Id,
+            Title = "Zmiana statusu zgłoszenia",
+            Message = $"Twoje zgłoszenie '{request.Title}' zostało zaktualizowane na status: {request.Status} przez {sender.FirstName} {sender.LastName}.",
+            IsRead = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Notifications.Add(notification);
+        
+        // Oznacz zgłoszenie jako wysłane
+        request.IsSubmitted = true;
+        
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Powiadomienie wysłane do pracownika." });
     }
 
 }

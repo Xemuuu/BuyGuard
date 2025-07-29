@@ -11,6 +11,7 @@ namespace BuyGuard.Api.Dtos
         public DateTime CreatedAt { get; set; }
         public string AuthorFirstName { get; set; } = default!;
         public string AuthorLastName { get; set; } = default!;
+        public string Reason { get; set; } = string.Empty;
     }
 
 }

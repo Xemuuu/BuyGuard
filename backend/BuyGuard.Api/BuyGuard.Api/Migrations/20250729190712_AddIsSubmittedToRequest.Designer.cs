@@ -3,6 +3,7 @@ using System;
 using BuyGuard.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BuyGuard.Api.Migrations
 {
     [DbContext(typeof(BuyGuardDbContext))]
-    partial class BuyGuardDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250729190712_AddIsSubmittedToRequest")]
+    partial class AddIsSubmittedToRequest
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -199,9 +202,6 @@ namespace BuyGuard.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("ManagerId")
-                        .HasColumnType("integer");
-
                     b.Property<decimal?>("ManagerLimitPln")
                         .HasColumnType("numeric");
 
@@ -223,8 +223,6 @@ namespace BuyGuard.Api.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
-
-                    b.HasIndex("ManagerId");
 
                     b.ToTable("Users");
                 });
@@ -324,16 +322,6 @@ namespace BuyGuard.Api.Migrations
                     b.Navigation("Manager");
                 });
 
-            modelBuilder.Entity("BuyGuard.Api.Models.User", b =>
-                {
-                    b.HasOne("BuyGuard.Api.Models.User", "Manager")
-                        .WithMany("Employees")
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Manager");
-                });
-
             modelBuilder.Entity("BuyGuard.Api.Models.Request", b =>
                 {
                     b.Navigation("Attachments");
@@ -343,8 +331,6 @@ namespace BuyGuard.Api.Migrations
 
             modelBuilder.Entity("BuyGuard.Api.Models.User", b =>
                 {
-                    b.Navigation("Employees");
-
                     b.Navigation("RequestsAuthored");
 
                     b.Navigation("RequestsManaged");

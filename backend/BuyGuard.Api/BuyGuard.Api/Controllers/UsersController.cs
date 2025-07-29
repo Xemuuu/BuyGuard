@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using BCrypt.Net;
 using BuyGuard.Api.Data;
 using BuyGuard.Api.Dtos;
 using BuyGuard.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 
-[Authorize(Roles = "admin,manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
@@ -26,6 +26,7 @@ public class UsersController : ControllerBase
         _mapper = mapper;
     }
 
+    [Authorize(Roles = "admin,manager")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -59,6 +60,7 @@ public class UsersController : ControllerBase
         return Ok(userDtos);
     }
 
+    [Authorize(Roles = "admin,manager")]
     [HttpPost]
     public async Task<ActionResult<UserDto>> CreateUser(CreateUserDto createUserDto)
     {
@@ -75,7 +77,7 @@ public class UsersController : ControllerBase
             return Conflict("Użytkownik o podanym e-mailu już istnieje.");
         }
 
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(createUserDto.Password);
+        var hashedPassword = HashPassword(createUserDto.Password);
 
         var newUser = new User
         {
@@ -96,7 +98,66 @@ public class UsersController : ControllerBase
     }
 
 
+    // PATCH: api/users/profile
+    [HttpPatch("profile")]
+    public async Task<IActionResult> UpdateProfile(UpdateProfileDto updateProfileDto)
+    {
+        var currentUserIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(currentUserIdStr) || !int.TryParse(currentUserIdStr, out var currentUserId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await _context.Users.FindAsync(currentUserId);
+        if (user == null)
+        {
+            return NotFound("Nie znaleziono użytkownika.");
+        }
+
+        // Aktualizuj pola tylko jeśli zostały podane
+        if (!string.IsNullOrEmpty(updateProfileDto.FirstName))
+        {
+            user.FirstName = updateProfileDto.FirstName;
+        }
+
+        if (!string.IsNullOrEmpty(updateProfileDto.LastName))
+        {
+            user.LastName = updateProfileDto.LastName;
+        }
+
+        if (!string.IsNullOrEmpty(updateProfileDto.Email))
+        {
+            // Sprawdź czy email nie jest już zajęty
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == updateProfileDto.Email && u.Id != currentUserId);
+            if (existingUser != null)
+            {
+                return BadRequest("Ten adres email jest już zajęty.");
+            }
+            user.Email = updateProfileDto.Email;
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw;
+        }
+
+        var updatedUserDto = _mapper.Map<UserDto>(user);
+        return Ok(new
+        {
+            UserId = user.Id.ToString(),
+            Email = user.Email,
+            Roles = new[] { user.Role },
+            FirstName = user.FirstName,
+            LastName = user.LastName
+        });
+    }
+
     // PATCH: api/users/{id}
+    [Authorize(Roles = "admin,manager")]
     [HttpPatch("{id}")]
     public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
     {
@@ -158,7 +219,7 @@ public class UsersController : ControllerBase
 
         if (updateUserDto.Password != null)
         {
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(updateUserDto.Password);
+            user.PasswordHash = HashPassword(updateUserDto.Password);
         }
 
         if (actorRole == "admin" && updateUserDto.ManagerLimitPln.HasValue)
@@ -180,6 +241,7 @@ public class UsersController : ControllerBase
     }
 
     // DELETE: api/users/{id}
+    [Authorize(Roles = "admin,manager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
@@ -247,4 +309,17 @@ public class UsersController : ControllerBase
         });
     }
 
+    private string HashPassword(string password)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(hashBytes);
+    }
+
+    private bool VerifyPassword(string password, string storedHash)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(hashBytes) == storedHash;
+    }
 }

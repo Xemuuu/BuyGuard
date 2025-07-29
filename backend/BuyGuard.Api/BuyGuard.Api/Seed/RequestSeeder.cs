@@ -17,7 +17,7 @@ public static class RequestSeeder
                 Description = "Proszę o zakup laptopa Dell XPS",
                 AmountPln = 5000,
                 Reason = "Nowy sprzęt dla pracownika",
-                Status = RequestStatus.Czeka,
+                Status = RequestStatus.PENDING,
                 AiScore = 80,
                 CreatedAt = DateTime.UtcNow.AddDays(-3),
                 UpdatedAt = DateTime.UtcNow.AddDays(-2)
@@ -32,7 +32,7 @@ public static class RequestSeeder
                 Description = "Proszę o zakup monitora 27 cali",
                 AmountPln = 1200,
                 Reason = "Ulepszenie stanowiska pracy",
-                Status = RequestStatus.Potwierdzono,
+                Status = RequestStatus.ACCEPTED,
                 AiScore = 90,
                 CreatedAt = DateTime.UtcNow.AddDays(-10),
                 UpdatedAt = DateTime.UtcNow.AddDays(-9)

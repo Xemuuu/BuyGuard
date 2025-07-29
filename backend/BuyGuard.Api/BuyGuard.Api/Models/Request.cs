@@ -1,6 +1,6 @@
 ﻿namespace BuyGuard.Api.Models;
 
-public enum RequestStatus { Czeka, Potwierdzono, Odrzucono, Zakupione }
+public enum RequestStatus { PENDING, ACCEPTED, REJECTED, PURCHASED }
 
 public class Request
 {
@@ -20,8 +20,9 @@ public class Request
     public string Description { get; set; } = "";
     public decimal AmountPln { get; set; }
     public string Reason { get; set; } = "";
-    public RequestStatus Status { get; set; } = RequestStatus.Czeka;
+    public RequestStatus Status { get; set; } = RequestStatus.PENDING;
     public int? AiScore { get; set; }
+    public bool IsSubmitted { get; set; } = false; // Czy zgłoszenie zostało wysłane do pracownika
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

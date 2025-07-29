@@ -5,6 +5,8 @@ using BuyGuard.Api.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 [Authorize]
 [ApiController]
@@ -33,16 +35,30 @@ public class AccountController : ControllerBase
             return NotFound("Nie znaleziono użytkownika.");
         }
 
-        var isOldPasswordValid = BCrypt.Net.BCrypt.Verify(changePasswordDto.OldPassword, user.PasswordHash);
+        var isOldPasswordValid = VerifyPassword(changePasswordDto.OldPassword, user.PasswordHash);
         if (!isOldPasswordValid)
         {
             return BadRequest(new { message = "Podane stare hasło jest nieprawidłowe." });
         }
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+        user.PasswordHash = HashPassword(changePasswordDto.NewPassword);
 
         await _context.SaveChangesAsync();
 
         return Ok(new { message = "Hasło zostało pomyślnie zmienione." });
+    }
+
+    private bool VerifyPassword(string password, string storedHash)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(hashBytes) == storedHash;
+    }
+
+    private string HashPassword(string password)
+    {
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(hashBytes);
     }
 }
