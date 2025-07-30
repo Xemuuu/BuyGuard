@@ -199,44 +199,96 @@ public class RequestsController : ControllerBase
 
     // GET: api/requests
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RequestListItemDto>>> GetRequests([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<RequestListItemDto>>> GetRequests(
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] decimal? minAmount,
+        [FromQuery] decimal? maxAmount,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortOrder,
+        [FromQuery] int pageNumber = 1, 
+        [FromQuery] int pageSize = 10)
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var currentUserRole = User.FindFirst(ClaimTypes.Role)!.Value;
-
-        Console.WriteLine($"GetRequests - User ID: {currentUserId}, Role: {currentUserRole}");
 
         var query = _context.Requests
             .Include(r => r.Author)
             .AsQueryable();
 
-        // Filtrowanie według roli
+        // Filtrowanie według roli (zachowujemy istniejącą logikę)
         if (currentUserRole == "employee")
         {
             query = query.Where(r => r.AuthorId == currentUserId);
-            Console.WriteLine($"Employee filter - AuthorId = {currentUserId}");
         }
         else if (currentUserRole == "manager")
         {
             query = query.Where(r => r.ManagerId == currentUserId && !r.IsSubmitted);
-            Console.WriteLine($"Manager filter - ManagerId = {currentUserId}, IsSubmitted = false");
         }
         // admin widzi wszystko – brak filtru
 
-        // Sprawdź ile requestów ma manager
-        var allManagerRequests = await _context.Requests
-            .Where(r => r.ManagerId == currentUserId)
-            .ToListAsync();
-        Console.WriteLine($"All requests for manager {currentUserId}: {allManagerRequests.Count}");
-        foreach (var req in allManagerRequests)
+        // Filtrowanie
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<RequestStatus>(status, true, out var parsedStatus))
         {
-            Console.WriteLine($"Request {req.Id}: ManagerId={req.ManagerId}, IsSubmitted={req.IsSubmitted}, Status={req.Status}");
+            query = query.Where(r => r.Status == parsedStatus);
+        }
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            query = query.Where(r => r.Title.ToLower().Contains(search.ToLower()));
+        }
+
+        if (minAmount.HasValue)
+        {
+            query = query.Where(r => r.AmountPln >= minAmount.Value);
+        }
+
+        if (maxAmount.HasValue)
+        {
+            query = query.Where(r => r.AmountPln <= maxAmount.Value);
+        }
+
+        if (startDate.HasValue)
+        {
+            query = query.Where(r => r.CreatedAt.Date >= startDate.Value.Date);
+        }
+
+        if (endDate.HasValue)
+        {
+            query = query.Where(r => r.CreatedAt.Date <= endDate.Value.Date);
+        }
+
+        // Sortowanie
+        if (!string.IsNullOrEmpty(sortBy))
+        {
+            bool isDescending = sortOrder?.ToLower() == "desc";
+
+            switch (sortBy.ToLower())
+            {
+                case "date":
+                    query = isDescending ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt);
+                    break;
+                case "amount":
+                    query = isDescending ? query.OrderByDescending(r => r.AmountPln) : query.OrderBy(r => r.AmountPln);
+                    break;
+                case "title":
+                    query = isDescending ? query.OrderByDescending(r => r.Title) : query.OrderBy(r => r.Title);
+                    break;
+                default:
+                    query = query.OrderByDescending(r => r.CreatedAt);
+                    break;
+            }
+        }
+        else
+        {
+            query = query.OrderByDescending(r => r.CreatedAt);
         }
 
         // Paginacja
         var skip = (pageNumber - 1) * pageSize;
         var pagedRequests = await query
-            .OrderByDescending(r => r.CreatedAt)
             .Skip(skip)
             .Take(pageSize)
             .Select(r => new RequestListItemDto
@@ -248,11 +300,9 @@ public class RequestsController : ControllerBase
                 CreatedAt = r.CreatedAt,
                 AuthorFirstName = r.Author.FirstName,
                 AuthorLastName = r.Author.LastName,
-                Reason = r.Reason // Dodaję Reason do DTO
+                Reason = r.Reason
             })
             .ToListAsync();
-
-        Console.WriteLine($"Returning {pagedRequests.Count} requests for {currentUserRole}");
 
         return Ok(pagedRequests);
     }
