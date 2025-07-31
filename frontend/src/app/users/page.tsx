@@ -158,6 +158,14 @@ export default function UsersPage() {
           >
             Log out
           </button>
+          <button
+            onClick={() => {
+              router.push('/dashboard');
+            }}
+            className="bg-zinc-600 absolute top-4 left-10 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+          >
+            Dashboard
+          </button>
       <div className="bg-zinc-800 p-4 rounded-lg shadow-md w-full max-w-3xl space-y-4">
         <h1 className="text-2xl font-bold text-white text-center">Lista użytkowników</h1>
         

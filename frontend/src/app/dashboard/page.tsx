@@ -57,55 +57,55 @@ export default function Dashboard() {
   const [editRequestLoading, setEditRequestLoading] = useState(false);
   const [editRequestMsg, setEditRequestMsg] = useState<string | null>(null);
   async function fetchRequestsAndStats() {
-  const queryParams = new URLSearchParams()
+    const queryParams = new URLSearchParams()
 
-  if (filters.search) queryParams.append("search", filters.search)
-  if (filters.status) queryParams.append("status", filters.status)
-  if (filters.minAmount) queryParams.append("minAmount", filters.minAmount)
-  if (filters.maxAmount) queryParams.append("maxAmount", filters.maxAmount)
-  if (filters.startDate) queryParams.append("startDate", filters.startDate)
-  if (filters.endDate) queryParams.append("endDate", filters.endDate)
-  if (filters.sortBy) queryParams.append("sortBy", filters.sortBy)
-  if (filters.sortOrder) queryParams.append("sortOrder", filters.sortOrder)
+    if (filters.search) queryParams.append("search", filters.search)
+    if (filters.status) queryParams.append("status", filters.status)
+    if (filters.minAmount) queryParams.append("minAmount", filters.minAmount)
+    if (filters.maxAmount) queryParams.append("maxAmount", filters.maxAmount)
+    if (filters.startDate) queryParams.append("startDate", filters.startDate)
+    if (filters.endDate) queryParams.append("endDate", filters.endDate)
+    if (filters.sortBy) queryParams.append("sortBy", filters.sortBy)
+    if (filters.sortOrder) queryParams.append("sortOrder", filters.sortOrder)
 
-const data: Request[] = await fetchWithAuth(`/api/requests?${queryParams.toString()}`)
-setRequests(data)
+    const data: Request[] = await fetchWithAuth(`/api/requests?${queryParams.toString()}`)
+    setRequests(data)
 
 
-  // Prosty oblicz statystyki lokalnie
-  const total = data.length
-  const pending = data.filter(r => r.status === "PENDING").length
-  const accepted = data.filter(r => r.status === "ACCEPTED").length
-  const rejected = data.filter(r => r.status === "REJECTED").length
-  const purchased = data.filter(r => r.status === "PURCHASED").length
-  const totalAmount = data.reduce((sum, r) => sum + r.amountPln, 0)
-  const averageAmount = total > 0 ? totalAmount / total : 0
+    // Prosty oblicz statystyki lokalnie
+    const total = data.length
+    const pending = data.filter(r => r.status === "PENDING").length
+    const accepted = data.filter(r => r.status === "ACCEPTED").length
+    const rejected = data.filter(r => r.status === "REJECTED").length
+    const purchased = data.filter(r => r.status === "PURCHASED").length
+    const totalAmount = data.reduce((sum, r) => sum + r.amountPln, 0)
+    const averageAmount = total > 0 ? totalAmount / total : 0
 
-  setStats({ total, pending, accepted, rejected, purchased, totalAmount, averageAmount })
-}
+    setStats({ total, pending, accepted, rejected, purchased, totalAmount, averageAmount })
+  }
 
   interface DashboardStats {
-  total: number
-  pending: number
-  accepted: number
-  rejected: number
-  purchased: number
-  totalAmount: number
-  averageAmount: number
+    total: number
+    pending: number
+    accepted: number
+    rejected: number
+    purchased: number
+    totalAmount: number
+    averageAmount: number
 
-}
+  }
 
-const [stats, setStats] = useState<DashboardStats | null>(null)
-const [filters, setFilters] = useState({
-  search: "",
-  status: "",
-  minAmount: "",
-  maxAmount: "",
-  startDate: "",
-  endDate: "",
-  sortBy: "",
-  sortOrder: "desc"
-})
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "",
+    minAmount: "",
+    maxAmount: "",
+    startDate: "",
+    endDate: "",
+    sortBy: "",
+    sortOrder: "desc"
+  })
 
 
   // do pobierania
@@ -131,44 +131,44 @@ const [filters, setFilters] = useState({
   const editUrlRef = useRef<HTMLInputElement>(null);
 
   // Funkcja do odświeżenia requestów
-const fetchRequests = async (filters?: {
-  status?: string;
-  minAmount?: number;
-  maxAmount?: number;
-  fromDate?: string;
-  toDate?: string;
-  search?: string;
-}) => {
-  const token = localStorage.getItem('token');
-  if (!token) return;
+  const fetchRequests = async (filters?: {
+    status?: string;
+    minAmount?: number;
+    maxAmount?: number;
+    fromDate?: string;
+    toDate?: string;
+    search?: string;
+  }) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-  const query = new URLSearchParams();
-  if (filters?.status) query.append('status', filters.status);
-  if (filters?.minAmount) query.append('minAmount', filters.minAmount.toString());
-  if (filters?.maxAmount) query.append('maxAmount', filters.maxAmount.toString());
-  if (filters?.fromDate) query.append('fromDate', filters.fromDate);
-  if (filters?.toDate) query.append('toDate', filters.toDate);
-  if (filters?.search) query.append('search', filters.search);
+    const query = new URLSearchParams();
+    if (filters?.status) query.append('status', filters.status);
+    if (filters?.minAmount) query.append('minAmount', filters.minAmount.toString());
+    if (filters?.maxAmount) query.append('maxAmount', filters.maxAmount.toString());
+    if (filters?.fromDate) query.append('fromDate', filters.fromDate);
+    if (filters?.toDate) query.append('toDate', filters.toDate);
+    if (filters?.search) query.append('search', filters.search);
 
-  try {
-    const res = await fetch(`http://localhost:5252/api/requests?${query.toString()}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const res = await fetch(`http://localhost:5252/api/requests?${query.toString()}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setRequests(data);
-      setRequestsTimestamp(Date.now());
-    } else {
-      console.error('Błąd pobierania zgłoszeń:', res.status);
+      if (res.ok) {
+        const data = await res.json();
+        setRequests(data);
+        setRequestsTimestamp(Date.now());
+      } else {
+        console.error('Błąd pobierania zgłoszeń:', res.status);
+      }
+    } catch (err) {
+      console.error('Błąd sieci:', err);
     }
-  } catch (err) {
-    console.error('Błąd sieci:', err);
-  }
-};
+  };
 
 
   // Funkcja do pobierania powiadomień
@@ -192,50 +192,50 @@ const fetchRequests = async (filters?: {
   };
 
   // ... inne funkcje, np. markAllAsRead
-  
-const downloadReport = async () => {
-  const token = localStorage.getItem("token");
-  if (!token) return;
 
-  setReportLoading(true);
+  const downloadReport = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  try {
-const query = new URLSearchParams();
-if (reportType === "monthly") {
-  const now = new Date();
-  query.append("month", (now.getMonth() + 1).toString());
-  query.append("year", now.getFullYear().toString());
-}
-query.append("format", reportFormat);
+    setReportLoading(true);
 
-const res = await fetch(`http://localhost:5252/api/requests/export?${query.toString()}`, {
-  method: "GET", // ✅
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+    try {
+      const query = new URLSearchParams();
+      if (reportType === "monthly") {
+        const now = new Date();
+        query.append("month", (now.getMonth() + 1).toString());
+        query.append("year", now.getFullYear().toString());
+      }
+      query.append("format", reportFormat);
+
+      const res = await fetch(`http://localhost:5252/api/requests/export?${query.toString()}`, {
+        method: "GET", // ✅
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
 
-    if (!res.ok) {
+      if (!res.ok) {
+        alert("Błąd pobierania raportu");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `raport-${reportType}.${reportFormat}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      setShowReportModal(false);
+    } catch (err) {
+      console.error("Błąd raportu:", err);
       alert("Błąd pobierania raportu");
-      return;
+    } finally {
+      setReportLoading(false);
     }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `raport-${reportType}.${reportFormat}`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    setShowReportModal(false);
-  } catch (err) {
-    console.error("Błąd raportu:", err);
-    alert("Błąd pobierania raportu");
-  } finally {
-    setReportLoading(false);
-  }
-};
+  };
 
 
   // Funkcja do oznaczania powiadomienia jako przeczytane
@@ -297,18 +297,18 @@ const res = await fetch(`http://localhost:5252/api/requests/export?${query.toStr
       console.error('Error deleting notification:', err);
     }
   };
-// debug
-useEffect(() => {
-  fetchWithAuth("/api/users/whoami").then((me) => {
-    console.log("Zalogowany użytkownik:", me)
-  })
-}, [])
+  // debug
+  useEffect(() => {
+    fetchWithAuth("/api/users/whoami").then((me) => {
+      console.log("Zalogowany użytkownik:", me)
+    })
+  }, [])
 
 
 
   useEffect(() => {
-  fetchRequestsAndStats();
-}, [filters]);
+    fetchRequestsAndStats();
+  }, [filters]);
   useEffect(() => {
     const token = localStorage.getItem('token');
 
@@ -328,9 +328,9 @@ useEffect(() => {
         });
 
         if (!res.ok) {
-  const text = await res.text()
-  throw new Error(`Login failed: ${text}`)
-}
+          const text = await res.text()
+          throw new Error(`Login failed: ${text}`)
+        }
         const json = await res.json();
         setData(json);
         console.log('=== WHOAMI RESPONSE ===');
@@ -343,7 +343,7 @@ useEffect(() => {
 
         // Pobierz zgłoszenia użytkownika
         await fetchRequests();
-        
+
         // Pobierz powiadomienia (tylko dla pracownika)
         if (Array.isArray(json.roles) && json.roles.includes('employee')) {
           await fetchNotifications();
@@ -378,6 +378,16 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-zinc-900 text-white relative flex flex-col">
       <main className="flex-1 flex flex-col p-2 sm:p-4">
+        {Array.isArray(data?.roles) && (data.roles.includes('manager') || data.roles.includes('admin')) && (
+            <button
+            onClick={() => {
+              router.push('/users');
+            }}
+            className="bg-zinc-600 absolute top-4 left-10 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition"
+          >
+            Users
+          </button>
+          )}
         <div className="absolute top-6 right-6 flex gap-2 z-50">
           <button
             onClick={() => setShowRequests(true)}
@@ -391,7 +401,6 @@ useEffect(() => {
           >
             Download raport
           </button>
-          {/* Przycisk powiadomień tylko dla pracownika */}
           {Array.isArray(data?.roles) && data.roles.includes('employee') && (
             <button
               onClick={() => setShowNotifications(true)}
@@ -405,6 +414,7 @@ useEffect(() => {
               )}
             </button>
           )}
+          
           <button
             onClick={() => {
               console.log('Logging out...');
@@ -461,8 +471,8 @@ useEffect(() => {
                             Authorization: `Bearer ${token}`,
                           },
                           body: JSON.stringify({
-                            EmployeeId: 3, // ID pracownika
-                            ManagerId: 2   // ID managera
+                            EmployeeId: 3,
+                            ManagerId: 2
                           }),
                         });
                         if (res.ok) {
@@ -497,17 +507,17 @@ useEffect(() => {
                       lastName?: string;
                     };
                     const body: EditUserPayload = {};
-                    
+
                     const email = emailRef.current?.value?.trim();
                     if (email && email !== (data.Email || data.email)) {
                       body.email = email;
                     }
-                    
+
                     const firstName = firstNameRef.current?.value?.trim();
                     if (firstName) {
                       body.firstName = firstName;
                     }
-                    
+
                     const lastName = lastNameRef.current?.value?.trim();
                     if (lastName) {
                       body.lastName = lastName;
@@ -670,67 +680,67 @@ useEffect(() => {
               >
                 &times;
               </button>
-<>
-  <h2 className="text-xl font-semibold mb-4 text-center">
-    {data.roles.includes('employee') ? 'Your requests' : 'Requests'}
-  </h2>
+              <>
+                <h2 className="text-xl font-semibold mb-4 text-center">
+                  {data.roles.includes('employee') ? 'Your requests' : 'Requests'}
+                </h2>
 
-  <div className="mb-4 grid grid-cols-1 md:grid-cols-7 gap-3">
-    <input
-      type="text"
-      placeholder="Szukaj po tytule"
-      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    />
-    <select
-      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    >
-      <option value="">Status</option>
-      <option value="PENDING">PENDING</option>
-      <option value="ACCEPTED">ACCEPTED</option>
-      <option value="REJECTED">REJECTED</option>
-      <option value="PURCHASED">PURCHASED</option>
-    </select>
-    <input
-      type="number"
-      placeholder="Min kwota"
-      onChange={(e) => setFilters(prev => ({ ...prev, minAmount: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    />
-    <input
-      type="number"
-      placeholder="Max kwota"
-      onChange={(e) => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    />
-    <input
-      type="date"
-      onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    />
-    <input
-      type="date"
-      onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-      className="bg-zinc-700 p-2 rounded"
-    />
-    <select
-      onChange={(e) => {
-        const [sortBy, sortOrder] = e.target.value.split('|');
-        setFilters(prev => ({ ...prev, sortBy, sortOrder }));
-      }}
-      className="bg-zinc-700 p-2 rounded"
-    >
-  <option value="">Sort by</option>
-  <option value="amount|asc">Price ↑</option>
-  <option value="amount|desc">Price ↓</option>
-  <option value="date|asc">Date ↑</option>
-  <option value="date|desc">Date ↓</option>
-  <option value="title|asc">Title A→Z</option>
-  <option value="title|desc">Title Z→A</option>
-    </select>
-  </div>
-</>
+                <div className="mb-4 grid grid-cols-1 md:grid-cols-7 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Szukaj po tytule"
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  />
+                  <select
+                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  >
+                    <option value="">Status</option>
+                    <option value="PENDING">PENDING</option>
+                    <option value="ACCEPTED">ACCEPTED</option>
+                    <option value="REJECTED">REJECTED</option>
+                    <option value="PURCHASED">PURCHASED</option>
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Min kwota"
+                    onChange={(e) => setFilters(prev => ({ ...prev, minAmount: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max kwota"
+                    onChange={(e) => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  />
+                  <input
+                    type="date"
+                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  />
+                  <input
+                    type="date"
+                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="bg-zinc-700 p-2 rounded"
+                  />
+                  <select
+                    onChange={(e) => {
+                      const [sortBy, sortOrder] = e.target.value.split('|');
+                      setFilters(prev => ({ ...prev, sortBy, sortOrder }));
+                    }}
+                    className="bg-zinc-700 p-2 rounded"
+                  >
+                    <option value="">Sort by</option>
+                    <option value="amount|asc">Price ↑</option>
+                    <option value="amount|desc">Price ↓</option>
+                    <option value="date|asc">Date ↑</option>
+                    <option value="date|desc">Date ↓</option>
+                    <option value="title|asc">Title A→Z</option>
+                    <option value="title|desc">Title Z→A</option>
+                  </select>
+                </div>
+              </>
 
 
               {(data.roles.includes('employee')
@@ -746,16 +756,16 @@ useEffect(() => {
                 )}
 
 
-{stats && (
-  <div className="mb-4 text-sm text-zinc-300 space-y-1">
-    <p><strong>Łączna liczba zgłoszeń:</strong> {stats.total}</p>
-    <p><strong>Oczekujące:</strong> {stats.pending} | <strong>Zaakceptowane:</strong> {stats.accepted} | <strong>Odrzucone:</strong> {stats.rejected} | <strong>Zrealizowane:</strong> {stats.purchased}</p>
-    <p><strong>Łączna kwota:</strong> {stats.totalAmount.toFixed(2)} PLN | <strong>Średnia kwota:</strong> {stats.averageAmount.toFixed(2)} PLN</p>
-  </div>
-)}
+              {stats && (
+                <div className="mb-4 text-sm text-zinc-300 space-y-1">
+                  <p><strong>Łączna liczba zgłoszeń:</strong> {stats.total}</p>
+                  <p><strong>Oczekujące:</strong> {stats.pending} | <strong>Zaakceptowane:</strong> {stats.accepted} | <strong>Odrzucone:</strong> {stats.rejected} | <strong>Zrealizowane:</strong> {stats.purchased}</p>
+                  <p><strong>Łączna kwota:</strong> {stats.totalAmount.toFixed(2)} PLN | <strong>Średnia kwota:</strong> {stats.averageAmount.toFixed(2)} PLN</p>
+                </div>
+              )}
 
               {requests.length === 0 ? (
-                
+
                 <p className="text-zinc-400">No requests.</p>
               ) : (
                 <table key={requestsTimestamp} className="min-w-full bg-zinc-800 rounded-md text-sm">
@@ -951,7 +961,7 @@ useEffect(() => {
             </div>
           </div>
         )}
-        
+
         {/* Modal z powiadomieniami */}
         {showNotifications && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -970,7 +980,7 @@ useEffect(() => {
                 </button>
                 <h2 className="text-xl font-semibold text-center">Powiadomienia</h2>
               </div>
-              
+
               <div className="flex-1 overflow-hidden">
                 {notifications.length === 0 ? (
                   <div className="p-4">
@@ -990,17 +1000,16 @@ useEffect(() => {
                       {notifications.map((notification) => (
                         <div
                           key={notification.id}
-                          className={`p-3 rounded-lg border ${
-                            notification.isRead ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-700 border-zinc-600'
-                          }`}
+                          className={`p-3 rounded-lg border ${notification.isRead ? 'bg-zinc-800 border-zinc-700' : 'bg-zinc-700 border-zinc-600'
+                            }`}
                         >
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <h3 className="font-semibold text-white">{notification.title}</h3>
                               <p className="text-sm text-zinc-300 mt-1">{notification.message}</p>
                               <p className="text-xs text-zinc-400 mt-2">
-                                Zgłoszenie: {notification.requestTitle} | 
-                                Od: {notification.senderName} | 
+                                Zgłoszenie: {notification.requestTitle} |
+                                Od: {notification.senderName} |
                                 {new Date(notification.createdAt).toLocaleString()}
                               </p>
                             </div>
@@ -1047,30 +1056,30 @@ useEffect(() => {
                 &times;
               </button>
               <h3 className="text-lg font-semibold mb-4 text-center">Edit Request</h3>
-              
+
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setEditRequestMsg(null);
                   setEditRequestLoading(true);
-                  
+
                   const token = localStorage.getItem('token');
                   if (!token) return;
-                  
+
                   const body: any = {};
-                  
+
                   const title = editTitleRef.current?.value?.trim();
                   if (title) body.Title = title;
-                  
+
                   const url = editUrlRef.current?.value?.trim();
                   if (url) body.Url = url;
-                  
+
                   const price = parseFloat(editPriceRef.current?.value || '0');
                   if (price > 0) body.AmountPln = price;
-                  
+
                   const reason = editReasonRef.current?.value?.trim();
                   if (reason) body.Reason = reason;
-                  
+
                   try {
                     const res = await fetch(`http://localhost:5252/api/requests/${showEditRequest}/edit`, {
                       method: 'PATCH',
@@ -1080,7 +1089,7 @@ useEffect(() => {
                       },
                       body: JSON.stringify(body),
                     });
-                    
+
                     if (res.ok) {
                       setEditRequestMsg('Request updated successfully!');
                       await fetchRequests();
@@ -1133,7 +1142,7 @@ useEffect(() => {
                     className="w-full bg-gray-700 border border-gray-600 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   className="w-full bg-zinc-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition mt-4"
@@ -1141,7 +1150,7 @@ useEffect(() => {
                 >
                   {editRequestLoading ? 'Updating...' : 'Update Request'}
                 </button>
-                
+
                 {editRequestMsg && (
                   <div className="mt-2 text-sm text-yellow-400 text-center">{editRequestMsg}</div>
                 )}
@@ -1175,57 +1184,57 @@ useEffect(() => {
           />
         </div>
         {showReportModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
-    <div
-      className="fixed inset-0 bg-black bg-opacity-40"
-      onClick={() => setShowReportModal(false)}
-    />
-    <div className="relative bg-zinc-900 p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-slide-in-down">
-      <button
-        className="absolute top-3 right-4 text-zinc-400 hover:text-white text-2xl"
-        onClick={() => setShowReportModal(false)}
-        aria-label="Close"
-      >
-        &times;
-      </button>
-      <h3 className="text-lg font-semibold mb-4 text-center">Download raport</h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="fixed inset-0 bg-black bg-opacity-40"
+              onClick={() => setShowReportModal(false)}
+            />
+            <div className="relative bg-zinc-900 p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-slide-in-down">
+              <button
+                className="absolute top-3 right-4 text-zinc-400 hover:text-white text-2xl"
+                onClick={() => setShowReportModal(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <h3 className="text-lg font-semibold mb-4 text-center">Download raport</h3>
 
-      <div className="flex flex-col gap-3">
-        <label className="text-sm font-medium">
-          Type:
-          <select
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="mt-1 w-full bg-zinc-800 border border-zinc-600 rounded px-3 py-2"
-          >
-            <option value="monthly">Monthly</option>
-            <option value="all">Całościowy</option>
-          </select>
-        </label>
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-medium">
+                  Type:
+                  <select
+                    value={reportType}
+                    onChange={(e) => setReportType(e.target.value)}
+                    className="mt-1 w-full bg-zinc-800 border border-zinc-600 rounded px-3 py-2"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="all">Całościowy</option>
+                  </select>
+                </label>
 
-        <label className="text-sm font-medium">
-          Format:
-          <select
-            value={reportFormat}
-            onChange={(e) => setReportFormat(e.target.value)}
-            className="mt-1 w-full bg-zinc-800 border border-zinc-600 rounded px-3 py-2"
-          >
-            <option value="csv">CSV</option>
-            <option value="pdf">PDF</option>
-          </select>
-        </label>
+                <label className="text-sm font-medium">
+                  Format:
+                  <select
+                    value={reportFormat}
+                    onChange={(e) => setReportFormat(e.target.value)}
+                    className="mt-1 w-full bg-zinc-800 border border-zinc-600 rounded px-3 py-2"
+                  >
+                    <option value="csv">CSV</option>
+                    <option value="pdf">PDF</option>
+                  </select>
+                </label>
 
-        <button
-          onClick={downloadReport}
-          disabled={reportLoading}
-          className="mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
-        >
-          {reportLoading ? "Generating..." : "Download"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                <button
+                  onClick={downloadReport}
+                  disabled={reportLoading}
+                  className="mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+                >
+                  {reportLoading ? "Generating..." : "Download"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
 
