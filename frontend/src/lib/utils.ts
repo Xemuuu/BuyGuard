@@ -17,22 +17,27 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const API_BASE = "http://localhost:5252";
   const fullUrl = `${API_BASE}${url}`;
 
-  console.log("Making request to:", fullUrl); // debug
-  console.log("Token:", token); // debug
-
   const res = await fetch(fullUrl, {
     ...options,
     headers,
   });
 
-  if (res.status == 204) {
-    return null
-  }
+  if (res.status === 204) return null;
+
+  const contentType = res.headers.get("content-type");
 
   if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`HTTP error! ${res.status}: ${errorText}`);
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
   }
 
-  return res.json();
+  if (contentType && contentType.includes("application/json")) {
+    return res.json();
+  } else {
+    const text = await res.text();
+    console.warn("Odpowiedź nie zawiera JSON-a:", text);
+    return text;
+  }
 }
+
+
